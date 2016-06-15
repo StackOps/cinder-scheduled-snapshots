@@ -22,30 +22,46 @@
 
 import sys
 import logging
+import logging.config
 import json
 import subprocess
+import ConfigParser
+
 from datetime import datetime, timedelta
 
 from openstacklibs.keystone import Keystone
 from openstacklibs.cinder import Cinder
 
+numargs = len(sys.argv)
+if numargs>2:
+    initfile = str(sys.argv[2])
+else:
+    initfile = "./stackops.ini"
 
-
-logging.basicConfig(filename='schedule_cinder_snapshots.log', level=logging.DEBUG,
-                    format='%(asctime)s %(levelname)s %(message)s')
+logging.config.fileConfig(initfile)
 logging.captureWarnings(True)
 
-keystone_url = "http://api.stackops.int:35357/v2.0"
-compute_url = "https://compute-mm1.mascloud.es/v1.1"
-volume_url = "https://volume-mm1.mascloud.es/v1"
+logger_ = logging.getLogger(__name__)
+
+config = ConfigParser.ConfigParser()
+config.read(initfile)
+
+usr = config.get('keystone', 'username')
+admin_tenant_name = config.get('keystone', 'tenant')
+keystone_url = config.get('keystone', 'url')
+volume_url = config.get('cinder', 'url')
+
+logger_.debug("USERNAME:%s" % usr)
+logger_.debug("TENANT:%s" % admin_tenant_name)
+logger_.debug("KEYSTONE URL:%s" % keystone_url)
+logger_.debug("CINDER URL:%s" % volume_url)
 
 usr = "admin"
-debug = False
 
 total = len(sys.argv)
 cmdargs = str(sys.argv)
 passw = str(sys.argv[1])
-os_admin_tenant_name = "admin"
+os_admin_tenant_name = admin_tenant_name
 
 adminKeystoneObj = Keystone(keystone_url, usr, passw, os_admin_tenant_name)
 cinderObj = Cinder(adminKeystoneObj.getToken(), volume_url)
@@ -81,6 +97,8 @@ if tenant is not None:
                 # If daily backup or is the day of the weekly backup, go for it
                 print "Schedule snapshot for today: %s, %s, %s, %s, %s, %s" % (
                     id, name, backup_type, rotation, schedule_backup, description)
+                logger_.info("Schedule snapshot for today: %s, %s, %s, %s, %s, %s" % (
+                    id, name, backup_type, rotation, schedule_backup, description))
                 display_name = "Scheduled snapshot launched on %s at %s:%s" % (
                     datetime.strftime(datetime.today(), "%Y-%m-%d"), hour, minutes)
                 display_description = display_name
@@ -108,6 +126,7 @@ if tenant is not None:
                         # Ok, we found a snapshot. Let's create the command to delete it.
                         snapshot_id = snapshot['id']
                         print "Schedule delete for today: %s" % (snapshot_id)
+                        logger_.info("Schedule delete for today: %s" % (snapshot_id))
                         url = "%s/%s/snapshots/%s" % (volume_url, owner_id, snapshot_id)
                         # The command to schedule DELETE today
                         # The command to schedule today
