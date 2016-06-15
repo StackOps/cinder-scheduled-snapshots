@@ -133,7 +133,7 @@ if tenant is not None:
                         delete_command = """curl -g -i -X DELETE %s -H \\"Content-Type: application/json\\" -H \\"Accept: application/json\\" -H \\"X-Auth-Token: %s\\" """ % (
                             url, localKeystoneObj.token_)
 
-                        at_command = """`echo "%s" | at %s%s`""" % (delete_command, hour, minutes)
+                        at_command = """`echo %s | at %s%s`""" % (delete_command, hour, minutes)
                         subprocess.call(at_command, shell=True)
 
 
